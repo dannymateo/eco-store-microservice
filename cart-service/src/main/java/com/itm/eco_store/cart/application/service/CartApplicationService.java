@@ -2,6 +2,7 @@ package com.itm.eco_store.cart.application.service;
 
 import com.itm.eco_store.cart.application.port.in.IAddProductToCartUseCase;
 import com.itm.eco_store.cart.application.port.in.ICheckoutCartUseCase;
+import com.itm.eco_store.cart.application.port.in.IClearCartUseCase;
 import com.itm.eco_store.cart.application.port.in.IGetCartUseCase;
 import com.itm.eco_store.cart.application.port.in.IRemoveProductFromCartUseCase;
 import com.itm.eco_store.cart.application.port.out.CartEventPort;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class CartApplicationService implements
-        IAddProductToCartUseCase, IRemoveProductFromCartUseCase, IGetCartUseCase, ICheckoutCartUseCase {
+        IAddProductToCartUseCase, IRemoveProductFromCartUseCase, IGetCartUseCase, ICheckoutCartUseCase, IClearCartUseCase {
 
     private final CartRepositoryPort cartRepositoryPort;
     private final ProductCatalogPort productCatalogPort;
@@ -48,6 +49,13 @@ public class CartApplicationService implements
         Cart saved = cartRepositoryPort.save(cart, CartExpirationPolicy.resolveTtl(cart));
         cartEventPort.publishCartCheckedOut(saved);
         return saved;
+    }
+
+    @Override
+    public Cart clearCart(String cartId) {
+        Cart cart = findExistingCart(cartId);
+        cart.clear();
+        return cartRepositoryPort.save(cart, CartExpirationPolicy.resolveTtl(cart));
     }
 
     private Cart findExistingCart(String cartId) {

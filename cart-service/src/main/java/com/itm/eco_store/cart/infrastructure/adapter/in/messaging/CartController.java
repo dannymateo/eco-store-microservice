@@ -2,10 +2,12 @@ package com.itm.eco_store.cart.infrastructure.adapter.in.messaging;
 
 import com.itm.eco_store.cart.application.port.in.IAddProductToCartUseCase;
 import com.itm.eco_store.cart.application.port.in.ICheckoutCartUseCase;
+import com.itm.eco_store.cart.application.port.in.IClearCartUseCase;
 import com.itm.eco_store.cart.application.port.in.IGetCartUseCase;
 import com.itm.eco_store.cart.application.port.in.IRemoveProductFromCartUseCase;
 import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.AddProductToCartCommand;
 import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.CheckoutCartCommand;
+import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.ClearCartCommand;
 import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.GetCartCommand;
 import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.NatsCommandResponse;
 import com.itm.eco_store.cart.infrastructure.adapter.in.messaging.dto.RemoveProductFromCartCommand;
@@ -32,6 +34,7 @@ public class CartController implements InitializingBean, DisposableBean {
     private final IRemoveProductFromCartUseCase removeProductFromCartUseCase;
     private final IGetCartUseCase getCartUseCase;
     private final ICheckoutCartUseCase checkoutCartUseCase;
+    private final IClearCartUseCase clearCartUseCase;
 
     private final Map<String, MessageHandler> handlers = new HashMap<>();
     private Dispatcher dispatcher;
@@ -43,7 +46,8 @@ public class CartController implements InitializingBean, DisposableBean {
             IAddProductToCartUseCase addProductToCartUseCase,
             IRemoveProductFromCartUseCase removeProductFromCartUseCase,
             IGetCartUseCase getCartUseCase,
-            ICheckoutCartUseCase checkoutCartUseCase
+            ICheckoutCartUseCase checkoutCartUseCase,
+            IClearCartUseCase clearCartUseCase
     ) {
         this.properties = properties;
         this.objectMapper = objectMapper;
@@ -52,6 +56,7 @@ public class CartController implements InitializingBean, DisposableBean {
         this.removeProductFromCartUseCase = removeProductFromCartUseCase;
         this.getCartUseCase = getCartUseCase;
         this.checkoutCartUseCase = checkoutCartUseCase;
+        this.clearCartUseCase = clearCartUseCase;
     }
 
     @Override
@@ -68,6 +73,7 @@ public class CartController implements InitializingBean, DisposableBean {
             dispatcher.unsubscribe(properties.subject().cart().removeProduct());
             dispatcher.unsubscribe(properties.subject().cart().get());
             dispatcher.unsubscribe(properties.subject().cart().checkout());
+            dispatcher.unsubscribe(properties.subject().cart().clear());
         }
     }
 
@@ -76,6 +82,7 @@ public class CartController implements InitializingBean, DisposableBean {
         handlers.put(properties.subject().cart().removeProduct(), this::handleRemoveProduct);
         handlers.put(properties.subject().cart().get(), this::handleGetCart);
         handlers.put(properties.subject().cart().checkout(), this::handleCheckout);
+        handlers.put(properties.subject().cart().clear(), this::handleClearCart);
     }
 
     private void dispatchMessage(Message message) {
@@ -114,6 +121,11 @@ public class CartController implements InitializingBean, DisposableBean {
     private Object handleCheckout(Message message) throws Exception {
         CheckoutCartCommand command = readCommand(message, CheckoutCartCommand.class);
         return checkoutCartUseCase.checkout(requireCartId(command.cartId()));
+    }
+
+    private Object handleClearCart(Message message) throws Exception {
+        ClearCartCommand command = readCommand(message, ClearCartCommand.class);
+        return clearCartUseCase.clearCart(requireCartId(command.cartId()));
     }
 
     private <T> T readCommand(Message message, Class<T> type) throws Exception {

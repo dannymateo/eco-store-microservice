@@ -14,6 +14,7 @@ import java.util.Optional;
 public class PostgresProductRepositoryAdapter implements ProductRepositoryPort {
 
     private final ProductJpaRepository repository;
+    private static final int DEFAULT_STOCK = 0;
 
     @Override
     public Product save(Product product) {
@@ -66,7 +67,7 @@ public class PostgresProductRepositoryAdapter implements ProductRepositoryPort {
                 .originalPrice(product.getPriceInfo().getOriginalPrice())
                 .discountPercent(product.getPriceInfo().getDiscountPercent())
                 .finalPrice(product.getPriceInfo().getFinalPrice())
-                .stock(product.getStock())
+                .stock(normalizeStock(product.getStock()))
                 .build();
     }
 
@@ -77,7 +78,11 @@ public class PostgresProductRepositoryAdapter implements ProductRepositoryPort {
                 .description(entity.getDescription())
                 .category(entity.getCategory())
                 .priceInfo(new PriceInfo(entity.getOriginalPrice(), entity.getDiscountPercent(), entity.getFinalPrice()))
-                .stock(entity.getStock())
+                .stock(normalizeStock(entity.getStock()))
                 .build();
+    }
+
+    private Integer normalizeStock(Integer stock) {
+        return stock == null ? DEFAULT_STOCK : stock;
     }
 }

@@ -78,6 +78,11 @@ public class Cart {
         this.checkedOut = true;
     }
 
+    public void clear() {
+        items.clear();
+        this.checkedOut = false;
+    }
+
     private void ensureOpen() {
         if (checkedOut) {
             throw new IllegalStateException("El carrito ya fue cerrado");

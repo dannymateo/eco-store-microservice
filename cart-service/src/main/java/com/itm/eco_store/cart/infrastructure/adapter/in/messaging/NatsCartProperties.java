@@ -18,7 +18,8 @@ public record NatsCartProperties(
             String removeProduct,
             String get,
             String checkout,
-            String checkoutEvent
+            String checkoutEvent,
+            String clear
     ) {
     }
 

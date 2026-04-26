@@ -17,6 +17,18 @@ services:
     volumes:
       - product-db-data:/var/lib/postgresql/data
 
+  checkout-postgres:
+    image: postgres:16-alpine
+    container_name: eco-store-checkout-db
+    environment:
+      POSTGRES_DB: checkout_db
+      POSTGRES_USER: checkout_user
+      POSTGRES_PASSWORD: checkout_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - checkout-db-data:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     container_name: eco-store-cart-redis
@@ -58,6 +70,30 @@ services:
     ports:
       - "8082:8082"
 
+  checkout-service:
+    build:
+      context: .
+      dockerfile: checkout-service/Dockerfile
+    container_name: eco-store-checkout-service
+    environment:
+      NATS_URL: nats://nats:4222
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://checkout-postgres:5432/checkout_db
+      SPRING_DATASOURCE_USERNAME: checkout_user
+      SPRING_DATASOURCE_PASSWORD: checkout_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_BASE_URL: ${PAYPAL_BASE_URL:-https://api-m.sandbox.paypal.com}
+      PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-http://localhost:3000/checkout/success}
+      PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-http://localhost:3000/checkout/cancel}
+    depends_on:
+      - nats
+      - checkout-postgres
+      - cart-service
+    ports:
+      - "8083:8083"
+
   api-gateway:
     build:
       context: .
@@ -66,12 +102,15 @@ services:
     environment:
       NATS_URL: nats://nats:4222
       SERVER_PORT: 8080
+      CHECKOUT_WEBHOOK_BASE_URL: http://checkout-service:8083
     depends_on:
       - nats
       - product-service
       - cart-service
+      - checkout-service
     ports:
       - "8080:8080"
 
 volumes:
   product-db-data:
+  checkout-db-data:

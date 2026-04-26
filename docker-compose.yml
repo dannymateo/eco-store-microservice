@@ -108,8 +108,6 @@ services:
       - product-service
       - cart-service
       - checkout-service
-    ports:
-      - "8080:8080"
 
 volumes:
   product-db-data:

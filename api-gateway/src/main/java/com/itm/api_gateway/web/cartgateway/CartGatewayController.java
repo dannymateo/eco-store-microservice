@@ -4,6 +4,7 @@ import com.itm.api_gateway.config.NatsGatewayProperties;
 import com.itm.api_gateway.messaging.NatsRequestClient;
 import com.itm.api_gateway.messaging.NatsResponse;
 import com.itm.api_gateway.web.cartgateway.dto.AddProductToCartRequest;
+import com.itm.api_gateway.web.cartgateway.dto.CheckoutRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -64,10 +65,20 @@ public class CartGatewayController {
         return toHttpResponse(response, HttpStatus.OK);
     }
 
-    @PostMapping("/{cartId}/checkout")
-    @Operation(summary = "Cerrar carrito", description = "Marca el carrito como cerrado y dispara evento de checkout.")
-    public ResponseEntity<?> checkout(@Parameter(example = "cart-123") @PathVariable String cartId) {
-        NatsResponse response = natsRequestClient.request(properties.subject().cart().checkout(), Map.of("cartId", cartId));
+    @PostMapping("/{cartId}/checkout/init")
+    @Operation(summary = "Iniciar checkout PayPal", description = "Crea la orden de PayPal y devuelve URL de aprobacion.")
+    public ResponseEntity<?> initCheckout(
+            @Parameter(example = "cart-123") @PathVariable String cartId,
+            @Valid @RequestBody CheckoutRequest body
+    ) {
+        NatsResponse response = natsRequestClient.request(
+                properties.subject().checkout().init(),
+                Map.of(
+                        "cartId", cartId,
+                        "paymentMethod", body.paymentMethod(),
+                        "payerEmail", body.payerEmail()
+                )
+        );
         return toHttpResponse(response, HttpStatus.OK);
     }
 
@@ -94,6 +105,9 @@ public class CartGatewayController {
             return HttpStatus.BAD_REQUEST;
         }
         if (lowered.contains("ya fue cerrado") || lowered.contains("sin items") || lowered.contains("stock insuficiente")) {
+            return HttpStatus.CONFLICT;
+        }
+        if (lowered.contains("order_not_approved") || lowered.contains("not approved")) {
             return HttpStatus.CONFLICT;
         }
         return HttpStatus.INTERNAL_SERVER_ERROR;
